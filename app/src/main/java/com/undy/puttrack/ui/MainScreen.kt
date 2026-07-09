@@ -77,6 +77,7 @@ private fun TrackingScreen(
     val activeCategory by viewModel.activeCategory.collectAsState()
     val distanceBreakdown by viewModel.distanceBreakdown.collectAsState()
     val quickEntryDistances by viewModel.quickEntryDistances.collectAsState()
+    val canUndo by viewModel.canUndo.collectAsState()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -161,6 +162,12 @@ private fun TrackingScreen(
             unit = unit,
             onRecord = { distance, made -> viewModel.recordManualPutt(distance, made) }
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextButton(onClick = { viewModel.undoLastPutt() }, enabled = canUndo) {
+            Text("Undo last putt")
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
         HorizontalDivider()

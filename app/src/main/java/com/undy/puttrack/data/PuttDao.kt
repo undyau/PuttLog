@@ -15,4 +15,7 @@ interface PuttDao {
 
     @Query("DELETE FROM putts")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM putts WHERE id = (SELECT id FROM putts ORDER BY timestampMillis DESC, id DESC LIMIT 1)")
+    suspend fun deleteLast()
 }

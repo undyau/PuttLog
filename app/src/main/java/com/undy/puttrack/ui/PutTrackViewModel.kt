@@ -74,6 +74,11 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
         .map { StatsCalculator.compute(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatsCalculator.compute(emptyList()))
 
+    /** Whether there is a recorded putt that can be undone. */
+    val canUndo: StateFlow<Boolean> = allPutts
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     /** The category of the most recently recorded putt, used to decide which breakdown to surface. */
     val activeCategory: StateFlow<PuttCategory?> = allPutts
         .map { putts -> putts.lastOrNull()?.let { categorize(it.distanceFeet) } }
@@ -188,6 +193,10 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
     fun clearAllData() {
         sessionStartTime.value = System.currentTimeMillis()
         viewModelScope.launch { dao.deleteAll() }
+    }
+
+    fun undoLastPutt() {
+        viewModelScope.launch { dao.deleteLast() }
     }
 
     override fun onCleared() {
