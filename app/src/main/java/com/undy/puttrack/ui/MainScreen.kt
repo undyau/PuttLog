@@ -1,7 +1,9 @@
 package com.undy.puttrack.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
@@ -49,6 +51,9 @@ import com.undy.puttrack.domain.PuttCategory
 import com.undy.puttrack.domain.PuttStats
 import kotlin.math.roundToInt
 
+private fun hasPermission(context: Context, permission: String) =
+    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
 @Composable
 fun MainScreen(modifier: Modifier = Modifier, viewModel: PutTrackViewModel = viewModel()) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -80,22 +85,32 @@ private fun TrackingScreen(
     val canUndo by viewModel.canUndo.collectAsState()
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> if (granted) viewModel.startSession() }
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val recordGranted = results[Manifest.permission.RECORD_AUDIO]
+            ?: hasPermission(context, Manifest.permission.RECORD_AUDIO)
+        if (recordGranted) viewModel.startSession()
+    }
 
     fun onMicClick() {
         if (isListening) {
             viewModel.stopSession()
             return
         }
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
+        val missing = buildList {
+            if (!hasPermission(context, Manifest.permission.RECORD_AUDIO)) {
+                add(Manifest.permission.RECORD_AUDIO)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                !hasPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
+            ) {
+                add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+        }
+        if (missing.isEmpty()) {
             viewModel.startSession()
         } else {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            permissionLauncher.launch(missing.toTypedArray())
         }
     }
 

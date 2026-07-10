@@ -25,6 +25,7 @@ class ContinuousSpeechRecognizer(
 ) {
     private var recognizer: SpeechRecognizer? = null
     private var active = false
+    private val scoRouter = BluetoothScoRouter(context)
 
     private val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -63,12 +64,13 @@ class ContinuousSpeechRecognizer(
             }
             recognizer = newRecognizer.apply { setRecognitionListener(listener) }
         }
-        listenOnce()
+        scoRouter.start { listenOnce() }
     }
 
     fun stop() {
         active = false
         recognizer?.stopListening()
+        scoRouter.stop()
         onListeningChanged(false)
     }
 
@@ -76,6 +78,7 @@ class ContinuousSpeechRecognizer(
         active = false
         recognizer?.destroy()
         recognizer = null
+        scoRouter.stop()
     }
 
     private fun listenOnce() {
