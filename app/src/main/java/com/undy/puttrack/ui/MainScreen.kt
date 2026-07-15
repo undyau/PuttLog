@@ -106,6 +106,11 @@ private fun TrackingScreen(
             ) {
                 add(Manifest.permission.BLUETOOTH_CONNECT)
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                !hasPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+            ) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
         if (missing.isEmpty()) {
             viewModel.startSession()

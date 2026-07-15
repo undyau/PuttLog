@@ -1,6 +1,12 @@
 package com.undy.puttrack.ui
 
 import android.app.Application
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.undy.puttrack.data.DistanceRangeConfig
@@ -16,9 +22,10 @@ import com.undy.puttrack.domain.PuttStats
 import com.undy.puttrack.domain.StatsCalculator
 import com.undy.puttrack.domain.categorize
 import com.undy.puttrack.domain.computeDistanceBreakdown
-import com.undy.puttrack.voice.ContinuousSpeechRecognizer
+import com.undy.puttrack.voice.ListeningService
 import com.undy.puttrack.voice.SoundFeedback
 import java.util.Calendar
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -109,27 +116,60 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
             }
         }
 
-    private var speechRecognizer: ContinuousSpeechRecognizer? = null
     private val soundFeedback = SoundFeedback()
 
-    private fun recognizer(): ContinuousSpeechRecognizer =
-        speechRecognizer ?: ContinuousSpeechRecognizer(
-            context = getApplication(),
-            onResult = { candidates -> handleRecognizedCandidates(candidates) },
-            onListeningChanged = { listening -> isListening.value = listening },
-            onUnavailable = {
+    private var boundService: ListeningService? = null
+    private var bound = false
+    private var listeningCollectJob: Job? = null
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val service = (binder as ListeningService.LocalBinder).getService()
+            boundService = service
+            service.onResult = { candidates -> handleRecognizedCandidates(candidates) }
+            service.onUnavailable = {
                 lastUnrecognized.value =
                     "On-device speech recognition isn't available on this phone (needs Android 12+)."
             }
-        ).also { speechRecognizer = it }
+            listeningCollectJob = viewModelScope.launch {
+                service.isListening.collect { listening -> isListening.value = listening }
+            }
+            service.startListening()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            boundService = null
+            listeningCollectJob?.cancel()
+            listeningCollectJob = null
+            isListening.value = false
+        }
+    }
 
     fun startSession() {
         sessionStartTime.value = System.currentTimeMillis()
-        recognizer().start()
+        val context: Context = getApplication()
+        val intent = Intent(context, ListeningService::class.java)
+        ContextCompat.startForegroundService(context, intent)
+        if (!bound) {
+            context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+            bound = true
+        }
     }
 
     fun stopSession() {
-        speechRecognizer?.stop()
+        boundService?.stopListening()
+        unbindListeningService()
+        isListening.value = false
+    }
+
+    private fun unbindListeningService() {
+        if (bound) {
+            getApplication<Application>().unbindService(serviceConnection)
+            bound = false
+        }
+        boundService = null
+        listeningCollectJob?.cancel()
+        listeningCollectJob = null
     }
 
     fun recordManualPutt(distanceInDisplayUnit: Double, made: Boolean) {
@@ -201,7 +241,8 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         super.onCleared()
-        speechRecognizer?.destroy()
+        boundService?.stopListening()
+        unbindListeningService()
         soundFeedback.release()
     }
 }
