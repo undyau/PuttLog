@@ -146,7 +146,6 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun startSession() {
-        sessionStartTime.value = System.currentTimeMillis()
         val context: Context = getApplication()
         val intent = Intent(context, ListeningService::class.java)
         ContextCompat.startForegroundService(context, intent)
