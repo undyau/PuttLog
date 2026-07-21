@@ -34,9 +34,24 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class StatsPeriod { SESSION, MONTH, YEAR }
+enum class StatsPeriod { DAY, MONTH, YEAR }
+
+data class Day(val year: Int, val month: Int, val dayOfMonth: Int)
 
 data class YearMonth(val year: Int, val month: Int)
+
+private fun dayStartMillis(day: Day): Long =
+    Calendar.getInstance().apply {
+        set(day.year, day.month, day.dayOfMonth, 0, 0, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+private fun compareDay(a: Day, b: Day): Int = dayStartMillis(a).compareTo(dayStartMillis(b))
+
+private fun currentDay(): Day {
+    val c = Calendar.getInstance()
+    return Day(c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH))
+}
 
 private fun compareYearMonth(a: YearMonth, b: YearMonth): Int =
     if (a.year != b.year) a.year - b.year else a.month - b.month
@@ -52,8 +67,6 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
 
     private val dao = PuttDatabase.getInstance(application).puttDao()
     private val settingsRepository = SettingsRepository(application)
-
-    private val sessionStartTime = MutableStateFlow(System.currentTimeMillis())
 
     private val allPutts: StateFlow<List<Putt>> = dao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -82,7 +95,27 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
     val lastHeard = MutableStateFlow<String?>(null)
     val lastUnrecognized = MutableStateFlow<String?>(null)
 
-    val selectedPeriod = MutableStateFlow(StatsPeriod.SESSION)
+    val selectedPeriod = MutableStateFlow(StatsPeriod.DAY)
+
+    val selectedDay = MutableStateFlow(currentDay())
+
+    /** Distinct calendar days that have at least one recorded putt. */
+    private val daysWithData: StateFlow<List<Day>> = allPutts
+        .map { putts ->
+            putts.map { p ->
+                val c = Calendar.getInstance().apply { timeInMillis = p.timestampMillis }
+                Day(c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH))
+            }.distinct()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val canGoToPreviousDay: StateFlow<Boolean> = combine(selectedDay, daysWithData) { selected, days ->
+        days.any { compareDay(it, selected) < 0 }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val canGoToNextDay: StateFlow<Boolean> = selectedDay
+        .map { it != currentDay() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val selectedMonth = MutableStateFlow(currentYearMonth())
 
@@ -97,8 +130,8 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val periodPutts: StateFlow<List<Putt>> =
-        combine(allPutts, sessionStartTime, selectedPeriod, selectedMonth, selectedYear) { putts, sessionStart, period, month, year ->
-            filterForPeriod(putts, period, sessionStart, month, year)
+        combine(allPutts, selectedPeriod, selectedDay, selectedMonth, selectedYear) { putts, period, day, month, year ->
+            filterForPeriod(putts, period, day, month, year)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val periodStats: StateFlow<PuttStats> = periodPutts
@@ -123,12 +156,17 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
     private fun filterForPeriod(
         putts: List<Putt>,
         period: StatsPeriod,
-        sessionStart: Long,
+        day: Day,
         month: YearMonth,
         year: Int
     ): List<Putt> =
         when (period) {
-            StatsPeriod.SESSION -> putts.filter { it.timestampMillis >= sessionStart }
+            StatsPeriod.DAY -> putts.filter { p ->
+                val c = Calendar.getInstance().apply { timeInMillis = p.timestampMillis }
+                c.get(Calendar.YEAR) == day.year &&
+                    c.get(Calendar.MONTH) == day.month &&
+                    c.get(Calendar.DAY_OF_MONTH) == day.dayOfMonth
+            }
             StatsPeriod.MONTH -> putts.filter { p ->
                 val c = Calendar.getInstance().apply { timeInMillis = p.timestampMillis }
                 c.get(Calendar.YEAR) == month.year && c.get(Calendar.MONTH) == month.month
@@ -199,6 +237,21 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
 
     fun selectPeriod(period: StatsPeriod) {
         selectedPeriod.value = period
+    }
+
+    fun shiftDay(delta: Int) {
+        val days = daysWithData.value
+        val current = selectedDay.value
+        if (delta < 0) {
+            val previous = days.filter { compareDay(it, current) < 0 }.maxByOrNull { dayStartMillis(it) }
+            if (previous != null) selectedDay.value = previous
+        } else if (delta > 0) {
+            val today = currentDay()
+            if (current == today) return
+            val next = days.filter { compareDay(it, current) > 0 && compareDay(it, today) <= 0 }
+                .minByOrNull { dayStartMillis(it) }
+            selectedDay.value = next ?: today
+        }
     }
 
     fun shiftMonth(delta: Int) {
@@ -273,7 +326,6 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun clearAllData() {
-        sessionStartTime.value = System.currentTimeMillis()
         viewModelScope.launch { dao.deleteAll() }
     }
 

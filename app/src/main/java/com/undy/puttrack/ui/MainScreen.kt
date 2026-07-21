@@ -82,6 +82,9 @@ private fun TrackingScreen(
     val unit by viewModel.distanceUnit.collectAsState()
     val stats by viewModel.periodStats.collectAsState()
     val selectedPeriod by viewModel.selectedPeriod.collectAsState()
+    val selectedDay by viewModel.selectedDay.collectAsState()
+    val canGoToPreviousDay by viewModel.canGoToPreviousDay.collectAsState()
+    val canGoToNextDay by viewModel.canGoToNextDay.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val canGoToNextMonth by viewModel.canGoToNextMonth.collectAsState()
     val selectedYear by viewModel.selectedYear.collectAsState()
@@ -209,11 +212,32 @@ private fun TrackingScreen(
                 ) {
                     Text(
                         when (period) {
-                            StatsPeriod.SESSION -> "Session"
+                            StatsPeriod.DAY -> "Day"
                             StatsPeriod.MONTH -> "Month"
                             StatsPeriod.YEAR -> "Year"
                         }
                     )
+                }
+            }
+        }
+
+        if (selectedPeriod == StatsPeriod.DAY) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = { viewModel.shiftDay(-1) }, enabled = canGoToPreviousDay) {
+                    Text("◀")
+                }
+                Text(
+                    text = dayLabel(selectedDay),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                TextButton(onClick = { viewModel.shiftDay(1) }, enabled = canGoToNextDay) {
+                    Text("▶")
                 }
             }
         }
@@ -312,6 +336,20 @@ private fun DistanceButtonRow(distances: List<Double>, color: Color, onClick: (D
 
 private fun formatDistance(value: Double): String =
     if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()
+
+private fun dayLabel(day: Day): String {
+    val today = Calendar.getInstance()
+    if (day.year == today.get(Calendar.YEAR) &&
+        day.month == today.get(Calendar.MONTH) &&
+        day.dayOfMonth == today.get(Calendar.DAY_OF_MONTH)
+    ) {
+        return "Today"
+    }
+    val calendar = Calendar.getInstance().apply {
+        set(day.year, day.month, day.dayOfMonth, 0, 0, 0)
+    }
+    return SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(calendar.time)
+}
 
 private fun monthLabel(month: YearMonth): String {
     val calendar = Calendar.getInstance().apply {
