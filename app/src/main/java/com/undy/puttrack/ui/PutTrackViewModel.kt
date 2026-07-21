@@ -46,6 +46,8 @@ private fun currentYearMonth(): YearMonth {
     return YearMonth(c.get(Calendar.YEAR), c.get(Calendar.MONTH))
 }
 
+private fun currentYear(): Int = Calendar.getInstance().get(Calendar.YEAR)
+
 class PutTrackViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = PuttDatabase.getInstance(application).puttDao()
@@ -88,9 +90,15 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
         .map { compareYearMonth(it, currentYearMonth()) < 0 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val selectedYear = MutableStateFlow(currentYear())
+
+    val canGoToNextYear: StateFlow<Boolean> = selectedYear
+        .map { it < currentYear() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     private val periodPutts: StateFlow<List<Putt>> =
-        combine(allPutts, sessionStartTime, selectedPeriod, selectedMonth) { putts, sessionStart, period, month ->
-            filterForPeriod(putts, period, sessionStart, month)
+        combine(allPutts, sessionStartTime, selectedPeriod, selectedMonth, selectedYear) { putts, sessionStart, period, month, year ->
+            filterForPeriod(putts, period, sessionStart, month, year)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val periodStats: StateFlow<PuttStats> = periodPutts
@@ -112,18 +120,21 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
             if (category == null) emptyList() else computeDistanceBreakdown(putts, category, unit)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private fun filterForPeriod(putts: List<Putt>, period: StatsPeriod, sessionStart: Long, month: YearMonth): List<Putt> =
+    private fun filterForPeriod(
+        putts: List<Putt>,
+        period: StatsPeriod,
+        sessionStart: Long,
+        month: YearMonth,
+        year: Int
+    ): List<Putt> =
         when (period) {
             StatsPeriod.SESSION -> putts.filter { it.timestampMillis >= sessionStart }
             StatsPeriod.MONTH -> putts.filter { p ->
                 val c = Calendar.getInstance().apply { timeInMillis = p.timestampMillis }
                 c.get(Calendar.YEAR) == month.year && c.get(Calendar.MONTH) == month.month
             }
-            StatsPeriod.YEAR -> {
-                val year = Calendar.getInstance().get(Calendar.YEAR)
-                putts.filter { p ->
-                    Calendar.getInstance().apply { timeInMillis = p.timestampMillis }.get(Calendar.YEAR) == year
-                }
+            StatsPeriod.YEAR -> putts.filter { p ->
+                Calendar.getInstance().apply { timeInMillis = p.timestampMillis }.get(Calendar.YEAR) == year
             }
         }
 
@@ -201,6 +212,13 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
         val candidate = YearMonth(c.get(Calendar.YEAR), c.get(Calendar.MONTH))
         if (compareYearMonth(candidate, currentYearMonth()) <= 0) {
             selectedMonth.value = candidate
+        }
+    }
+
+    fun shiftYear(delta: Int) {
+        val candidate = selectedYear.value + delta
+        if (candidate <= currentYear()) {
+            selectedYear.value = candidate
         }
     }
 

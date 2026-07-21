@@ -84,6 +84,8 @@ private fun TrackingScreen(
     val selectedPeriod by viewModel.selectedPeriod.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val canGoToNextMonth by viewModel.canGoToNextMonth.collectAsState()
+    val selectedYear by viewModel.selectedYear.collectAsState()
+    val canGoToNextYear by viewModel.canGoToNextYear.collectAsState()
     val activeCategory by viewModel.activeCategory.collectAsState()
     val distanceBreakdown by viewModel.distanceBreakdown.collectAsState()
     val quickEntryDistances by viewModel.quickEntryDistances.collectAsState()
@@ -232,6 +234,27 @@ private fun TrackingScreen(
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
                 TextButton(onClick = { viewModel.shiftMonth(1) }, enabled = canGoToNextMonth) {
+                    Text("▶")
+                }
+            }
+        }
+
+        if (selectedPeriod == StatsPeriod.YEAR) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = { viewModel.shiftYear(-1) }) {
+                    Text("◀")
+                }
+                Text(
+                    text = selectedYear.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                TextButton(onClick = { viewModel.shiftYear(1) }, enabled = canGoToNextYear) {
                     Text("▶")
                 }
             }
