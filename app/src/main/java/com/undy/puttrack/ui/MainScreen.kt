@@ -49,6 +49,9 @@ import com.undy.puttrack.domain.CategoryStats
 import com.undy.puttrack.domain.DistanceStat
 import com.undy.puttrack.domain.PuttCategory
 import com.undy.puttrack.domain.PuttStats
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private fun hasPermission(context: Context, permission: String) =
@@ -79,6 +82,8 @@ private fun TrackingScreen(
     val unit by viewModel.distanceUnit.collectAsState()
     val stats by viewModel.periodStats.collectAsState()
     val selectedPeriod by viewModel.selectedPeriod.collectAsState()
+    val selectedMonth by viewModel.selectedMonth.collectAsState()
+    val canGoToNextMonth by viewModel.canGoToNextMonth.collectAsState()
     val activeCategory by viewModel.activeCategory.collectAsState()
     val distanceBreakdown by viewModel.distanceBreakdown.collectAsState()
     val quickEntryDistances by viewModel.quickEntryDistances.collectAsState()
@@ -211,6 +216,27 @@ private fun TrackingScreen(
             }
         }
 
+        if (selectedPeriod == StatsPeriod.MONTH) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = { viewModel.shiftMonth(-1) }) {
+                    Text("◀")
+                }
+                Text(
+                    text = monthLabel(selectedMonth),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                TextButton(onClick = { viewModel.shiftMonth(1) }, enabled = canGoToNextMonth) {
+                    Text("▶")
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         StatsSection(stats = stats, unit = unit)
@@ -263,6 +289,15 @@ private fun DistanceButtonRow(distances: List<Double>, color: Color, onClick: (D
 
 private fun formatDistance(value: Double): String =
     if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()
+
+private fun monthLabel(month: YearMonth): String {
+    val calendar = Calendar.getInstance().apply {
+        set(Calendar.YEAR, month.year)
+        set(Calendar.MONTH, month.month)
+        set(Calendar.DAY_OF_MONTH, 1)
+    }
+    return SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calendar.time)
+}
 
 @Composable
 private fun StatsSection(stats: PuttStats, unit: DistanceUnit) {
