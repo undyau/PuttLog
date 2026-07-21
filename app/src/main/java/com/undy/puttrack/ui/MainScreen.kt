@@ -133,7 +133,7 @@ private fun TrackingScreen(
         modifier = modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -152,7 +152,7 @@ private fun TrackingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Button(
             onClick = { onMicClick() },
@@ -185,7 +185,7 @@ private fun TrackingScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         QuickEntryGrid(
             distances = quickEntryDistances,
@@ -193,15 +193,15 @@ private fun TrackingScreen(
             onRecord = { distance, made -> viewModel.recordManualPutt(distance, made) }
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         TextButton(onClick = { viewModel.undoLastPutt() }, enabled = canUndo) {
             Text("Undo last putt")
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             StatsPeriod.entries.forEachIndexed { index, period ->
@@ -284,12 +284,12 @@ private fun TrackingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         StatsSection(stats = stats, unit = unit)
 
         if (activeCategory != null && distanceBreakdown.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             BreakdownSection(category = activeCategory!!, unit = unit, breakdown = distanceBreakdown)
         }
     }
@@ -363,9 +363,9 @@ private fun monthLabel(month: YearMonth): String {
 @Composable
 private fun StatsSection(stats: PuttStats, unit: DistanceUnit) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             OverallRow(stats.overall)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             CategoryRow("C1X", rangeLabel(PuttCategory.C1X, unit), stats.c1x)
             if (stats.c2.attempts > 0) {
                 CategoryRow("C2", rangeLabel(PuttCategory.C2, unit), stats.c2)
@@ -383,7 +383,7 @@ private fun StatsSection(stats: PuttStats, unit: DistanceUnit) {
 @Composable
 private fun BreakdownSection(category: PuttCategory, unit: DistanceUnit, breakdown: List<DistanceStat>) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 text = "${categoryDisplayName(category)} breakdown",
                 fontWeight = FontWeight.Bold,
@@ -393,7 +393,7 @@ private fun BreakdownSection(category: PuttCategory, unit: DistanceUnit, breakdo
                 text = "Based on your most recent putt's range",
                 style = MaterialTheme.typography.bodySmall
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             breakdown.forEach { stat ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
