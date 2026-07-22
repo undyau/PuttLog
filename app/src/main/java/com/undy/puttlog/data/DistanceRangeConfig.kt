@@ -17,6 +17,6 @@ data class DistanceRangeConfig(val min: Double, val max: Double, val interval: D
         private const val EPSILON = 1e-9
 
         val DEFAULT_FEET = DistanceRangeConfig(min = 12.0, max = 36.0, interval = 3.0)
-        val DEFAULT_METERS = DistanceRangeConfig(min = 4.0, max = 14.0, interval = 1.0)
+        val DEFAULT_METERS = DistanceRangeConfig(min = 5.0, max = 11.0, interval = 1.0)
     }
 }
