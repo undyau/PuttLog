@@ -190,14 +190,10 @@ private fun TrackingScreen(
         QuickEntryGrid(
             distances = quickEntryDistances,
             unit = unit,
-            onRecord = { distance, made -> viewModel.recordManualPutt(distance, made) }
+            onRecord = { distance, made -> viewModel.recordManualPutt(distance, made) },
+            canUndo = canUndo,
+            onUndo = { viewModel.undoLastPutt() }
         )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        TextButton(onClick = { viewModel.undoLastPutt() }, enabled = canUndo) {
-            Text("Undo last putt")
-        }
 
         Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider()
@@ -297,9 +293,16 @@ private fun TrackingScreen(
 
 private val MakeGreen = Color(0xFF2E7D32)
 private val MissRed = Color(0xFFC62828)
+private val UndoOrange = Color(0xFFE65100)
 
 @Composable
-private fun QuickEntryGrid(distances: List<Double>, unit: DistanceUnit, onRecord: (Double, Boolean) -> Unit) {
+private fun QuickEntryGrid(
+    distances: List<Double>,
+    unit: DistanceUnit,
+    onRecord: (Double, Boolean) -> Unit,
+    canUndo: Boolean,
+    onUndo: () -> Unit
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Make (${unit.label})", style = MaterialTheme.typography.labelMedium, color = MakeGreen)
         Spacer(modifier = Modifier.height(4.dp))
@@ -309,12 +312,32 @@ private fun QuickEntryGrid(distances: List<Double>, unit: DistanceUnit, onRecord
 
         Text("Miss (${unit.label})", style = MaterialTheme.typography.labelMedium, color = MissRed)
         Spacer(modifier = Modifier.height(4.dp))
-        DistanceButtonRow(distances = distances, color = MissRed, onClick = { distance -> onRecord(distance, false) })
+        DistanceButtonRow(
+            distances = distances,
+            color = MissRed,
+            onClick = { distance -> onRecord(distance, false) },
+            trailingContent = {
+                Button(
+                    onClick = onUndo,
+                    enabled = canUndo,
+                    colors = ButtonDefaults.buttonColors(containerColor = UndoOrange),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(width = 44.dp, height = 38.dp)
+                ) {
+                    Text("Undo", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        )
     }
 }
 
 @Composable
-private fun DistanceButtonRow(distances: List<Double>, color: Color, onClick: (Double) -> Unit) {
+private fun DistanceButtonRow(
+    distances: List<Double>,
+    color: Color,
+    onClick: (Double) -> Unit,
+    trailingContent: @Composable () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -326,11 +349,12 @@ private fun DistanceButtonRow(distances: List<Double>, color: Color, onClick: (D
                 onClick = { onClick(distance) },
                 colors = ButtonDefaults.buttonColors(containerColor = color),
                 contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(width = 34.dp, height = 32.dp)
+                modifier = Modifier.size(width = 38.dp, height = 36.dp)
             ) {
                 Text(formatDistance(distance), style = MaterialTheme.typography.labelSmall)
             }
         }
+        trailingContent()
     }
 }
 
