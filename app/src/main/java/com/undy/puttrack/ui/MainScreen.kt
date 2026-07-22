@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -293,7 +295,7 @@ private fun TrackingScreen(
 
 private val MakeGreen = Color(0xFF2E7D32)
 private val MissRed = Color(0xFFC62828)
-private val UndoOrange = Color(0xFFE65100)
+private val UndoBlue = Color(0xFF1565C0)
 
 @Composable
 private fun QuickEntryGrid(
@@ -303,53 +305,86 @@ private fun QuickEntryGrid(
     canUndo: Boolean,
     onUndo: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Make (${unit.label})", style = MaterialTheme.typography.labelMedium, color = MakeGreen)
-        Spacer(modifier = Modifier.height(4.dp))
-        DistanceButtonRow(distances = distances, color = MakeGreen, onClick = { distance -> onRecord(distance, true) })
+    // Miss row carries the trailing Undo button, so it's always the wider of the two rows;
+    // basing spacing on it keeps both rows visually aligned instead of drifting independently.
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val gapCount = distances.size
+        val itemsWidth = ButtonWidth * distances.size + UndoButtonWidth
+        val tightWidth = itemsWidth + MinButtonSpacing * gapCount
+        val fitsWithoutScrolling = gapCount > 0 && tightWidth <= maxWidth
+        val spacing = if (fitsWithoutScrolling) {
+            ((maxWidth - itemsWidth) / gapCount).coerceAtMost(MaxButtonSpacing)
+        } else {
+            MinButtonSpacing
+        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text("Make (${unit.label})", style = MaterialTheme.typography.labelMedium, color = MakeGreen)
+            Spacer(modifier = Modifier.height(4.dp))
+            DistanceButtonRow(
+                distances = distances,
+                color = MakeGreen,
+                onClick = { distance -> onRecord(distance, true) },
+                spacing = spacing,
+                needsScroll = fitsWithoutScrolling.not()
+            )
 
-        Text("Miss (${unit.label})", style = MaterialTheme.typography.labelMedium, color = MissRed)
-        Spacer(modifier = Modifier.height(4.dp))
-        DistanceButtonRow(
-            distances = distances,
-            color = MissRed,
-            onClick = { distance -> onRecord(distance, false) },
-            trailingContent = {
-                Button(
-                    onClick = onUndo,
-                    enabled = canUndo,
-                    colors = ButtonDefaults.buttonColors(containerColor = UndoOrange),
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.size(width = 44.dp, height = 38.dp)
-                ) {
-                    Text("Undo", style = MaterialTheme.typography.labelSmall)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text("Miss (${unit.label})", style = MaterialTheme.typography.labelMedium, color = MissRed)
+            Spacer(modifier = Modifier.height(4.dp))
+            DistanceButtonRow(
+                distances = distances,
+                color = MissRed,
+                onClick = { distance -> onRecord(distance, false) },
+                spacing = spacing,
+                needsScroll = fitsWithoutScrolling.not(),
+                trailingContent = {
+                    Button(
+                        onClick = onUndo,
+                        enabled = canUndo,
+                        colors = ButtonDefaults.buttonColors(containerColor = UndoBlue),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(width = UndoButtonWidth, height = 38.dp)
+                    ) {
+                        Text("Undo", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 }
+
+private val ButtonWidth = 38.dp
+private val UndoButtonWidth = 44.dp
+private val MinButtonSpacing = 3.dp
+private val MaxButtonSpacing = 16.dp
 
 @Composable
 private fun DistanceButtonRow(
     distances: List<Double>,
     color: Color,
     onClick: (Double) -> Unit,
+    spacing: Dp,
+    needsScroll: Boolean,
     trailingContent: @Composable () -> Unit = {}
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
+        modifier = if (needsScroll) {
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+        } else {
+            Modifier.fillMaxWidth()
+        },
+        horizontalArrangement = Arrangement.spacedBy(spacing)
     ) {
         distances.forEach { distance ->
             Button(
                 onClick = { onClick(distance) },
                 colors = ButtonDefaults.buttonColors(containerColor = color),
                 contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.size(width = 38.dp, height = 36.dp)
+                modifier = Modifier.size(width = ButtonWidth, height = 36.dp)
             ) {
                 Text(formatDistance(distance), style = MaterialTheme.typography.labelSmall)
             }
