@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PutTrack"
+rootProject.name = "PuttLog"
 include(":app")

@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.undy.puttrack"
+    namespace = "com.undy.puttlog"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.undy.puttrack"
+        applicationId = "com.undy.puttlog"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
