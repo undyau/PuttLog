@@ -396,7 +396,7 @@ private fun DistanceButtonRow(
 private fun formatDistance(value: Double): String =
     if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()
 
-private fun dayLabel(day: Day): String {
+internal fun dayLabel(day: Day): String {
     val today = Calendar.getInstance()
     if (day.year == today.get(Calendar.YEAR) &&
         day.month == today.get(Calendar.MONTH) &&

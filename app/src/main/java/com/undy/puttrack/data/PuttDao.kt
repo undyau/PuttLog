@@ -13,8 +13,8 @@ interface PuttDao {
     @Query("SELECT * FROM putts ORDER BY timestampMillis ASC")
     fun observeAll(): Flow<List<Putt>>
 
-    @Query("DELETE FROM putts")
-    suspend fun deleteAll()
+    @Query("DELETE FROM putts WHERE timestampMillis BETWEEN :startMillis AND :endMillis")
+    suspend fun deleteBetween(startMillis: Long, endMillis: Long)
 
     @Query("DELETE FROM putts WHERE id = (SELECT id FROM putts ORDER BY timestampMillis DESC, id DESC LIMIT 1)")
     suspend fun deleteLast()

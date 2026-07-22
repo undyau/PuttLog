@@ -38,6 +38,8 @@ enum class StatsPeriod { DAY, MONTH, YEAR }
 
 data class Day(val year: Int, val month: Int, val dayOfMonth: Int)
 
+private const val DAY_MILLIS = 24L * 60 * 60 * 1000
+
 data class YearMonth(val year: Int, val month: Int)
 
 private fun dayStartMillis(day: Day): Long =
@@ -325,8 +327,13 @@ class PutTrackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun clearAllData() {
-        viewModelScope.launch { dao.deleteAll() }
+    fun clearDateRange(start: Day, end: Day) {
+        viewModelScope.launch {
+            val (from, to) = if (compareDay(start, end) <= 0) start to end else end to start
+            val startMillis = dayStartMillis(from)
+            val endMillis = dayStartMillis(to) + DAY_MILLIS - 1
+            dao.deleteBetween(startMillis, endMillis)
+        }
     }
 
     fun undoLastPutt() {

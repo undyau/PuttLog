@@ -11,15 +11,19 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.undy.puttrack.data.DistanceRangeConfig
 import com.undy.puttrack.data.DistanceUnit
+import java.util.Calendar
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +50,6 @@ fun SettingsScreen(
 ) {
     val unit by viewModel.distanceUnit.collectAsState()
     val rangeConfig by viewModel.currentRangeConfig.collectAsState()
-    var showClearConfirmation by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
         Row(
@@ -98,38 +103,125 @@ fun SettingsScreen(
         Text("Data", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Permanently deletes every recorded putt across all sessions, months, and years.",
+            text = "Permanently deletes recorded putts within a date range.",
             style = MaterialTheme.typography.bodySmall
         )
         Spacer(modifier = Modifier.height(12.dp))
-        Button(
-            onClick = { showClearConfirmation = true },
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-        ) {
-            Text("Clear all data")
+        DeleteRangeSection(onDelete = { start, end -> viewModel.clearDateRange(start, end) })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DeleteRangeSection(onDelete: (Day, Day) -> Unit) {
+    var startDay by remember { mutableStateOf<Day?>(null) }
+    var endDay by remember { mutableStateOf<Day?>(null) }
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedButton(onClick = { showStartPicker = true }, modifier = Modifier.weight(1f)) {
+            Text(startDay?.let { dayLabel(it) } ?: "Start date")
+        }
+        OutlinedButton(onClick = { showEndPicker = true }, modifier = Modifier.weight(1f)) {
+            Text(endDay?.let { dayLabel(it) } ?: "End date")
         }
     }
 
-    if (showClearConfirmation) {
+    Spacer(modifier = Modifier.height(12.dp))
+
+    Button(
+        onClick = { showDeleteConfirmation = true },
+        enabled = startDay != null && endDay != null,
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+    ) {
+        Text("Delete data in range")
+    }
+
+    if (showStartPicker) {
+        DayPickerDialog(
+            initialDay = startDay,
+            onDismiss = { showStartPicker = false },
+            onConfirm = { startDay = it }
+        )
+    }
+
+    if (showEndPicker) {
+        DayPickerDialog(
+            initialDay = endDay,
+            onDismiss = { showEndPicker = false },
+            onConfirm = { endDay = it }
+        )
+    }
+
+    val start = startDay
+    val end = endDay
+    if (showDeleteConfirmation && start != null && end != null) {
         AlertDialog(
-            onDismissRequest = { showClearConfirmation = false },
-            title = { Text("Clear all data?") },
-            text = { Text("This permanently deletes every recorded putt. This can't be undone.") },
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Delete this range?") },
+            text = {
+                Text(
+                    "This permanently deletes every putt recorded between " +
+                        "${dayLabel(start)} and ${dayLabel(end)}. This can't be undone."
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.clearAllData()
-                    showClearConfirmation = false
+                    onDelete(start, end)
+                    showDeleteConfirmation = false
+                    startDay = null
+                    endDay = null
                 }) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearConfirmation = false }) {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
                     Text("Cancel")
                 }
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DayPickerDialog(initialDay: Day?, onDismiss: () -> Unit, onConfirm: (Day) -> Unit) {
+    val state = rememberDatePickerState(initialSelectedDateMillis = initialDay?.let { utcMidnightMillis(it) })
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                state.selectedDateMillis?.let { onConfirm(dayFromUtcMillis(it)) }
+                onDismiss()
+            }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    ) {
+        DatePicker(state = state)
+    }
+}
+
+private fun utcMidnightMillis(day: Day): Long =
+    Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        clear()
+        set(day.year, day.month, day.dayOfMonth)
+    }.timeInMillis
+
+private fun dayFromUtcMillis(millis: Long): Day {
+    val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = millis }
+    return Day(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH))
 }
 
 @Composable
