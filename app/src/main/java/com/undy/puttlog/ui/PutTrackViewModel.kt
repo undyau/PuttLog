@@ -76,6 +76,9 @@ class PuttLogViewModel(application: Application) : AndroidViewModel(application)
     val distanceUnit: StateFlow<DistanceUnit> = settingsRepository.distanceUnit
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DistanceUnit.FEET)
 
+    val audioInputEnabled: StateFlow<Boolean> = settingsRepository.audioInputEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     private val feetRange: StateFlow<DistanceRangeConfig> = settingsRepository.feetRange
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DistanceRangeConfig.DEFAULT_FEET)
 
@@ -315,6 +318,11 @@ class PuttLogViewModel(application: Application) : AndroidViewModel(application)
 
     fun setDistanceUnit(unit: DistanceUnit) {
         viewModelScope.launch { settingsRepository.setDistanceUnit(unit) }
+    }
+
+    fun setAudioInputEnabled(enabled: Boolean) {
+        if (!enabled && isListening.value) stopSession()
+        viewModelScope.launch { settingsRepository.setAudioInputEnabled(enabled) }
     }
 
     fun setRangeConfig(config: DistanceRangeConfig) {

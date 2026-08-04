@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -21,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -50,6 +52,7 @@ fun SettingsScreen(
 ) {
     val unit by viewModel.distanceUnit.collectAsState()
     val rangeConfig by viewModel.currentRangeConfig.collectAsState()
+    val audioInputEnabled by viewModel.audioInputEnabled.collectAsState()
 
     Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
         Row(
@@ -95,6 +98,30 @@ fun SettingsScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
         RangeEditor(unit = unit, range = rangeConfig, onSave = { viewModel.setRangeConfig(it) })
+
+        Spacer(modifier = Modifier.height(32.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Audio input", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "Lets you speak distances instead of tapping. When off, the mic " +
+                        "button and voice hints are hidden to leave more room on screen.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Switch(
+                checked = audioInputEnabled,
+                onCheckedChange = { viewModel.setAudioInputEnabled(it) }
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
         HorizontalDivider()

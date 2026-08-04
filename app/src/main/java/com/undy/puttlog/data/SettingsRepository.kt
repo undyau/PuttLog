@@ -1,6 +1,7 @@
 package com.undy.puttlog.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -52,6 +53,15 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
+    /** Whether voice (audio) input is enabled. Off by default to keep the main screen compact. */
+    val audioInputEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[AUDIO_INPUT_ENABLED_KEY] ?: false
+    }
+
+    suspend fun setAudioInputEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[AUDIO_INPUT_ENABLED_KEY] = enabled }
+    }
+
     companion object {
         private val UNIT_KEY = stringPreferencesKey("distance_unit")
         private val FEET_MIN_KEY = doublePreferencesKey("range_feet_min")
@@ -60,5 +70,6 @@ class SettingsRepository(private val context: Context) {
         private val METERS_MIN_KEY = doublePreferencesKey("range_meters_min")
         private val METERS_MAX_KEY = doublePreferencesKey("range_meters_max")
         private val METERS_INTERVAL_KEY = doublePreferencesKey("range_meters_interval")
+        private val AUDIO_INPUT_ENABLED_KEY = booleanPreferencesKey("audio_input_enabled")
     }
 }

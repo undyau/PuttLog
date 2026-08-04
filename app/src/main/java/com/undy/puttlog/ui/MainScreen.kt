@@ -81,6 +81,7 @@ private fun TrackingScreen(
     val isListening by viewModel.isListening.collectAsState()
     val lastHeard by viewModel.lastHeard.collectAsState()
     val lastUnrecognized by viewModel.lastUnrecognized.collectAsState()
+    val audioInputEnabled by viewModel.audioInputEnabled.collectAsState()
     val unit by viewModel.distanceUnit.collectAsState()
     val stats by viewModel.periodStats.collectAsState()
     val selectedPeriod by viewModel.selectedPeriod.collectAsState()
@@ -154,37 +155,39 @@ private fun TrackingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        if (audioInputEnabled) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-        Button(
-            onClick = { onMicClick() },
-            colors = if (isListening) {
-                ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            } else {
-                ButtonDefaults.buttonColors()
+            Button(
+                onClick = { onMicClick() },
+                colors = if (isListening) {
+                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                } else {
+                    ButtonDefaults.buttonColors()
+                }
+            ) {
+                Text(if (isListening) "Listening… tap to stop" else "Tap to start voice input")
             }
-        ) {
-            Text(if (isListening) "Listening… tap to stop" else "Tap to start voice input")
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Say a distance and \"make\" or \"miss\" (e.g. \"20 make\"), or \"stop\" to end.",
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-
-        lastHeard?.let {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Heard: \"$it\"", style = MaterialTheme.typography.bodySmall)
-        }
-        lastUnrecognized?.let {
+
             Text(
-                text = it,
+                text = "Say a distance and \"make\" or \"miss\" (e.g. \"20 make\"), or \"stop\" to end.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+
+            lastHeard?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Heard: \"$it\"", style = MaterialTheme.typography.bodySmall)
+            }
+            lastUnrecognized?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
