@@ -1,0 +1,14 @@
+PuttLog is a fast, distraction-free way to track your disc golf putting practice.
+
+Log every putt in under a second with large Make/Miss buttons for the distances you practice most, fully customizable in feet or meters. Want to keep your hands free at the basket? Turn on optional voice input and just say the distance — "20 make", "15 miss" — to log putts without touching your phone.
+
+FEATURES
+
+• One-tap Make/Miss logging with a customizable distance range and interval
+• Optional hands-free voice input using on-device speech recognition — no audio ever leaves your phone
+• Stats broken down by putting category (Tap-in, C1X, C2, C3) to match how competitive disc golfers train
+• Day, month, and year views so you can track trends over a season
+• Instant undo if you log a putt by mistake
+• All data stays on your device — no account, no cloud sync, no ads, no tracking
+
+Whether you're grinding reps at the practice basket or logging putts mid-round, PuttLog stays out of your way so you can focus on your stroke.
